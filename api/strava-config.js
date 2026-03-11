@@ -1,7 +1,7 @@
 // api/strava-config.js
 // Returns the public Strava client ID so the frontend doesn't hardcode it
 
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
   const clientId = process.env.STRAVA_CLIENT_ID;
 
   if (!clientId) {
