@@ -337,11 +337,16 @@
   // ─── STRAVA CONFIG ─────────────────────────────────────────────────────────
   // 1. Register your app at https://www.strava.com/settings/api
   // 2. Set Authorization Callback Domain to your Vercel domain
-  // 3. Replace YOUR_CLIENT_ID below with your numeric Client ID
-  // 4. Add STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET to Vercel Environment Variables
+  // 3. Add STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET to Vercel Environment Variables
   // ───────────────────────────────────────────────────────────────────────────
-  const STRAVA_CLIENT_ID  = 'YOUR_CLIENT_ID'; // <-- replace this
+  let STRAVA_CLIENT_ID  = null;
   const STRAVA_REDIRECT   = window.location.origin + window.location.pathname;
+
+  // Fetch the client ID from the server so it's not hardcoded
+  fetch('/api/strava-config')
+    .then(r => r.json())
+    .then(data => { STRAVA_CLIENT_ID = data.client_id; })
+    .catch(() => { console.warn('Could not load Strava config'); });
 
   // ── Tab switching ──────────────────────────────────────────────────────────
   function switchTab(name, btn) {
@@ -445,6 +450,10 @@
   const clearAuth = () => localStorage.removeItem(LS_KEY);
 
   function connectStrava() {
+    if (!STRAVA_CLIENT_ID) {
+      alert('Strava is not configured yet. The site owner needs to set STRAVA_CLIENT_ID in Vercel environment variables.');
+      return;
+    }
     const url = `https://www.strava.com/oauth/authorize`
       + `?client_id=${STRAVA_CLIENT_ID}`
       + `&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT)}`
