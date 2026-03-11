@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Banquet Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rye&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold: #C8960C;
+      --gold-light: #F0C040;
+      --cream: #F5EDD6;
+      --brown-dark: #1A0F00;
+      --brown-mid: #3D2000;
+      --brown-warm: #6B3A00;
+      --red: #8B1A1A;
+      --strava: #FC4C02;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--brown-dark);
+      color: var(--cream);
+      font-family: 'Libre Baskerville', serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(92deg, transparent, transparent 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 6px),
+        repeating-linear-gradient(180deg, transparent, transparent 40px, rgba(255,200,0,0.02) 40px, rgba(255,200,0,0.02) 41px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+    .header { text-align: center; margin-bottom: 36px; animation: fadeDown 0.8s ease both; }
+    .banner { display: inline-block; background: var(--gold); color: var(--brown-dark); font-family: 'Rye', cursive; font-size: 11px; letter-spacing: 4px; text-transform: uppercase; padding: 6px 20px; margin-bottom: 16px; }
+    h1 { font-family: 'Rye', cursive; font-size: clamp(2.4rem, 7vw, 4rem); line-height: 1.1; color: var(--gold-light); text-shadow: 3px 3px 0 var(--brown-dark), 0 0 40px rgba(200,150,12,0.3); margin-bottom: 8px; }
+    .subtitle { font-style: italic; color: rgba(245,237,214,0.6); font-size: 0.95rem; letter-spacing: 1px; }
+
+    /* Tab Nav */
+    .tab-nav { display: flex; gap: 0; margin-bottom: 28px; border-bottom: 1px solid rgba(200,150,12,0.25); animation: fadeUp 0.6s 0.1s ease both; }
+    .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; color: rgba(245,237,214,0.4); cursor: pointer; font-family: 'Rye', cursive; font-size: 0.8rem; letter-spacing: 2px; padding: 12px 20px 14px; text-transform: uppercase; transition: color 0.2s, border-color 0.2s; margin-bottom: -1px; }
+    .tab-btn:hover { color: var(--gold); }
+    .tab-btn.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+    .tab-panel { display: none; animation: fadeUp 0.4s ease both; }
+    .tab-panel.active { display: block; }
+
+    /* Card */
+    .card { background: linear-gradient(145deg, var(--brown-mid), #2A1500); border: 1px solid rgba(200,150,12,0.3); border-radius: 4px; padding: 36px 32px; box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,80,0.1); }
+    .input-group { margin-bottom: 28px; }
+    label { display: block; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+    .input-row { display: flex; gap: 12px; align-items: stretch; }
+    input[type="number"] { flex: 1; background: var(--brown-dark); border: 1px solid rgba(200,150,12,0.4); border-radius: 3px; color: var(--cream); font-family: 'Libre Baskerville', serif; font-size: 1.4rem; padding: 14px 18px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; -moz-appearance: textfield; }
+    input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(200,150,12,0.2); }
+    input::placeholder { color: rgba(245,237,214,0.25); }
+    select { background: var(--brown-dark); border: 1px solid rgba(200,150,12,0.4); border-radius: 3px; color: var(--cream); font-family: 'Libre Baskerville', serif; font-size: 0.85rem; padding: 14px 12px; outline: none; cursor: pointer; }
+    select option { background: var(--brown-mid); }
+
+    /* Pills */
+    .activity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+    .pill { background: var(--brown-dark); border: 1px solid rgba(200,150,12,0.3); border-radius: 3px; color: rgba(245,237,214,0.7); cursor: pointer; font-family: 'Libre Baskerville', serif; font-size: 0.75rem; padding: 10px 8px; text-align: center; transition: all 0.15s; }
+    .pill:hover { border-color: var(--gold); color: var(--cream); }
+    .pill.active { background: rgba(200,150,12,0.2); border-color: var(--gold); color: var(--gold-light); }
+    .pill-icon { display: block; font-size: 1.1rem; margin-bottom: 3px; }
+
+    /* Buttons */
+    .btn { width: 100%; background: linear-gradient(135deg, var(--gold), #A07008, var(--gold)); background-size: 200% 100%; border: none; border-radius: 3px; color: var(--brown-dark); cursor: pointer; font-family: 'Rye', cursive; font-size: 1.1rem; letter-spacing: 2px; padding: 18px; margin-top: 8px; transition: background-position 0.4s, transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 20px rgba(200,150,12,0.3); }
+    .btn:hover { background-position: 100% 0; box-shadow: 0 6px 28px rgba(200,150,12,0.5); }
+    .btn:active { transform: translateY(1px); }
+    .btn-outline { width: 100%; background: transparent; border: 1px solid rgba(200,150,12,0.5); border-radius: 3px; color: var(--gold); cursor: pointer; font-family: 'Rye', cursive; font-size: 0.95rem; letter-spacing: 2px; padding: 16px; transition: all 0.2s; }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold-light); background: rgba(200,150,12,0.07); }
+    .btn-outline:active { transform: translateY(1px); }
+    .btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-strava { width: 100%; background: var(--strava); border: none; border-radius: 3px; color: #fff; cursor: pointer; font-family: 'Rye', cursive; font-size: 1rem; letter-spacing: 2px; padding: 18px; transition: filter 0.2s, transform 0.1s; box-shadow: 0 4px 20px rgba(252,76,2,0.35); display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn-strava:hover { filter: brightness(1.1); }
+    .btn-strava:active { transform: translateY(1px); }
+    .btn-strava svg { width: 22px; height: 22px; fill: #fff; flex-shrink: 0; }
+
+    /* Divider */
+    .divider { display: flex; align-items: center; gap: 12px; margin: 32px 0; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+
+    /* Manual Result */
+    .result { margin-top: 40px; text-align: center; animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both; display: none; }
+    .result.show { display: block; }
+    .result-label { font-size: 0.75rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(245,237,214,0.5); margin-bottom: 12px; }
+    .beer-count { font-family: 'Rye', cursive; font-size: clamp(4rem, 16vw, 7rem); color: var(--gold-light); line-height: 1; text-shadow: 4px 4px 0 var(--brown-dark), 0 0 60px rgba(240,192,64,0.4); margin-bottom: 4px; }
+    .beer-unit { font-family: 'Rye', cursive; font-size: 1.2rem; color: var(--gold); letter-spacing: 3px; }
+    .beer-visual { font-size: 2.8rem; margin: 20px 0; letter-spacing: 4px; animation: float 2s ease-in-out infinite; }
+    .result-note { font-style: italic; color: rgba(245,237,214,0.55); font-size: 0.88rem; max-width: 380px; margin: 0 auto; line-height: 1.7; }
+    .stat-row { display: flex; justify-content: center; gap: 32px; margin: 24px 0; flex-wrap: wrap; }
+    .stat { text-align: center; }
+    .stat-val { font-family: 'Rye', cursive; font-size: 1.4rem; color: var(--gold-light); }
+    .stat-lbl { font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(245,237,214,0.4); margin-top: 2px; }
+    .verdict-bar { margin: 28px 0 0; height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+    .verdict-fill { height: 100%; border-radius: 3px; transition: width 1s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+    .verdict-text { margin-top: 12px; font-size: 0.85rem; letter-spacing: 1px; }
+
+    /* GPS */
+    .gps-status { margin-top: 12px; font-size: 0.8rem; font-style: italic; color: rgba(245,237,214,0.45); min-height: 20px; transition: color 0.3s; }
+    .gps-status.error { color: #C0504D; }
+    .gps-status.loading { color: var(--gold); }
+    .map-links { display: none; gap: 8px; margin-top: 14px; flex-wrap: wrap; justify-content: center; }
+    .map-links.show { display: flex; }
+    .map-link { display: inline-flex; align-items: center; gap: 6px; background: rgba(200,150,12,0.12); border: 1px solid rgba(200,150,12,0.35); border-radius: 3px; color: var(--gold-light); cursor: pointer; font-family: 'Libre Baskerville', serif; font-size: 0.78rem; padding: 9px 14px; text-decoration: none; transition: all 0.15s; letter-spacing: 0.5px; }
+    .map-link:hover { background: rgba(200,150,12,0.25); border-color: var(--gold); color: var(--cream); }
+
+    /* Strava */
+    .strava-hero { padding: 20px 0 32px; text-align: center; }
+    .strava-hero p { color: rgba(245,237,214,0.55); font-style: italic; font-size: 0.92rem; line-height: 1.8; margin-bottom: 28px; }
+    .strava-logo { font-size: 3rem; margin-bottom: 12px; }
+    .athlete-bar { display: none; align-items: center; gap: 14px; background: rgba(252,76,2,0.1); border: 1px solid rgba(252,76,2,0.3); border-radius: 4px; padding: 14px 18px; margin-bottom: 28px; }
+    .athlete-bar.show { display: flex; }
+    .athlete-avatar-placeholder { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--strava); background: rgba(252,76,2,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+    .athlete-info { text-align: left; flex: 1; }
+    .athlete-name { font-family: 'Rye', cursive; color: var(--gold-light); font-size: 1rem; }
+    .athlete-meta { font-size: 0.75rem; color: rgba(245,237,214,0.4); margin-top: 2px; letter-spacing: 1px; }
+    .btn-disconnect { background: none; border: 1px solid rgba(252,76,2,0.4); border-radius: 3px; color: rgba(252,76,2,0.7); cursor: pointer; font-family: 'Libre Baskerville', serif; font-size: 0.72rem; padding: 6px 12px; transition: all 0.15s; }
+    .btn-disconnect:hover { border-color: var(--strava); color: var(--strava); }
+    .strava-loading { display: none; text-align: center; padding: 40px 0; color: rgba(245,237,214,0.5); font-style: italic; }
+    .strava-loading.show { display: block; }
+    .load-icon { font-size: 2rem; display: inline-block; animation: spin 1.2s linear infinite; }
+    .strava-data { display: none; }
+    .strava-data.show { display: block; }
+    .section-title { font-family: 'Rye', cursive; color: var(--gold); font-size: 1rem; letter-spacing: 2px; margin-bottom: 6px; }
+    .section-sub { font-size: 0.78rem; color: rgba(245,237,214,0.4); font-style: italic; margin-bottom: 18px; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px; }
+    .summary-card { background: linear-gradient(145deg, var(--brown-mid), #2A1500); border: 1px solid rgba(200,150,12,0.3); border-radius: 4px; padding: 20px; text-align: center; }
+    .summary-card.highlight { border-color: var(--gold); background: linear-gradient(145deg, rgba(200,150,12,0.12), rgba(42,21,0,0.9)); }
+    .summary-val { font-family: 'Rye', cursive; font-size: 2.6rem; color: var(--gold-light); line-height: 1; }
+    .summary-val.big { font-size: 3.2rem; }
+    .summary-lbl { font-size: 0.68rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(245,237,214,0.4); margin-top: 6px; }
+    .summary-sub { font-size: 0.75rem; color: rgba(245,237,214,0.35); font-style: italic; margin-top: 4px; }
+    .table-wrap { overflow-x: auto; margin-bottom: 40px; border: 1px solid rgba(200,150,12,0.2); border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    thead tr { background: rgba(200,150,12,0.12); }
+    th { text-align: left; padding: 12px 14px; font-family: 'Rye', cursive; font-size: 0.7rem; letter-spacing: 1.5px; color: var(--gold); border-bottom: 1px solid rgba(200,150,12,0.2); white-space: nowrap; }
+    td { padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); color: rgba(245,237,214,0.8); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(200,150,12,0.05); }
+    .td-beers { font-family: 'Rye', cursive; color: var(--gold-light); font-size: 1.05rem; }
+    .td-type { font-size: 0.75rem; color: rgba(245,237,214,0.45); }
+    .td-date { color: rgba(245,237,214,0.4); font-size: 0.78rem; }
+    .trend-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .trend-row:last-child { border-bottom: none; }
+    .trend-week { font-size: 0.75rem; color: rgba(245,237,214,0.4); width: 80px; flex-shrink: 0; }
+    .trend-bar-wrap { flex: 1; height: 8px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
+    .trend-bar-fill { height: 100%; border-radius: 4px; transition: width 1.2s ease; }
+    .trend-beers { font-family: 'Rye', cursive; color: var(--gold-light); width: 50px; text-align: right; flex-shrink: 0; font-size: 0.95rem; }
+    .strava-error { display: none; text-align: center; padding: 32px 0; color: #C0504D; font-style: italic; font-size: 0.9rem; }
+    .strava-error.show { display: block; }
+
+    /* Footer */
+    .footer { text-align: center; margin-top: 48px; color: rgba(245,237,214,0.25); font-size: 0.75rem; font-style: italic; line-height: 1.8; }
+
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning { display: inline-block; animation: spin 1s linear infinite; }
+
+    @media (max-width: 520px) {
+      .card { padding: 24px 18px; }
+      .activity-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat-row { gap: 20px; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .tab-btn { font-size: 0.65rem; padding: 12px 12px 14px; letter-spacing: 1px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header class="header">
+    <div class="banner">Rocky Mountain's Finest</div>
+    <h1>The Banquet<br/>Calculator</h1>
+    <p class="subtitle">You earned it. Find out how many.</p>
+  </header>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('manual', this)">⌨️ Manual</button>
+    <button class="tab-btn" onclick="switchTab('strava', this)">🚴 Strava</button>
+    <button class="tab-btn" onclick="switchTab('nearby', this)">📍 Find Coors</button>
+  </nav>
+
+  <!-- TAB 1: MANUAL -->
+  <div class="tab-panel active" id="tab-manual">
+    <div class="card">
+      <div class="input-group">
+        <label>Calories Burned Today</label>
+        <div class="input-row">
+          <input type="number" id="calories" placeholder="e.g. 600" min="0" max="10000"/>
+          <select id="unit">
+            <option value="cal">cal</option>
+            <option value="kcal">kcal</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>What Did You Do?</label>
+        <div class="activity-grid">
+          <button class="pill" onclick="selectActivity(this)"><span class="pill-icon">🚶</span>Walking</button>
+          <button class="pill" onclick="selectActivity(this)"><span class="pill-icon">🏃</span>Running</button>
+          <button class="pill" onclick="selectActivity(this)"><span class="pill-icon">🚴</span>Cycling</button>
+          <button class="pill" onclick="selectActivity(this)"><span class="pill-icon">🏋️</span>Lifting</button>
+          <button class="pill" onclick="selectActivity(this)"><span class="pill-icon">🏊</span>Swimming</button>
+          <button class="pill" onclick="selectActivity(this)"><span class="pill-icon">⛏️</span>Manual Labor</button>
+        </div>
+      </div>
+      <button class="btn" onclick="calculate()">🍺 &nbsp; Pour Me A Number</button>
+    </div>
+    <div class="result" id="result">
+      <div class="divider"><span>🌾</span></div>
+      <p class="result-label">You've earned</p>
+      <div class="beer-count" id="beerCount">0</div>
+      <div class="beer-unit">Coors Banquet<span id="plural">s</span></div>
+      <div class="beer-visual" id="beerVisual">🍺</div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-val" id="statCal">—</div><div class="stat-lbl">Cals Burned</div></div>
+        <div class="stat"><div class="stat-val">149</div><div class="stat-lbl">Cal / Banquet</div></div>
+        <div class="stat"><div class="stat-val" id="statRemain">—</div><div class="stat-lbl">Leftover Cals</div></div>
+      </div>
+      <div class="verdict-bar"><div class="verdict-fill" id="verdictFill"></div></div>
+      <div class="verdict-text" id="verdictText"></div>
+      <p class="result-note" id="resultNote"></p>
+    </div>
+  </div>
+
+  <!-- TAB 2: STRAVA -->
+  <div class="tab-panel" id="tab-strava">
+    <div class="card">
+      <div class="athlete-bar" id="athleteBar">
+        <div class="athlete-avatar-placeholder" id="athleteAvatar">🏃</div>
+        <div class="athlete-info">
+          <div class="athlete-name" id="athleteName">Athlete</div>
+          <div class="athlete-meta" id="athleteMeta">Connected to Strava</div>
+        </div>
+        <button class="btn-disconnect" onclick="disconnectStrava()">Disconnect</button>
+      </div>
+
+      <div class="strava-connect-area" id="stravaConnect">
+        <div class="strava-hero">
+          <div class="strava-logo">🏅</div>
+          <p>Connect your Strava account to automatically pull your workouts and see exactly how many Coors Banquets you've earned — based on your recent sessions and your trending weekly calorie burn.</p>
+          <button class="btn-strava" onclick="connectStrava()">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0 0 19.828h4.172"/></svg>
+            Connect with Strava
+          </button>
+        </div>
+      </div>
+
+      <div class="strava-loading" id="stravaLoading">
+        <div class="load-icon">🍺</div>
+        <p style="margin-top:14px;font-size:0.88rem;">Fetching your workouts...</p>
+      </div>
+
+      <div class="strava-error" id="stravaError">
+        <p id="stravaErrorMsg">Something went wrong connecting to Strava.</p>
+        <button class="btn-outline" style="max-width:220px;margin:16px auto 0;" onclick="connectStrava()">Try Again</button>
+      </div>
+
+      <div class="strava-data" id="stravaData">
+        <div class="summary-grid" id="summaryGrid"></div>
+
+        <div style="margin-bottom:32px;">
+          <div class="section-title">🏅 Most Recent Workout</div>
+          <div class="section-sub">Coors earned from your last recorded activity</div>
+          <div id="recentWorkoutCard"></div>
+        </div>
+
+        <div style="margin-bottom:32px;">
+          <div class="section-title">📈 Weekly Trending Burn</div>
+          <div class="section-sub">Avg calories per week over your last 8 active weeks</div>
+          <div id="trendSection"></div>
+        </div>
+
+        <div>
+          <div class="section-title">📋 Recent Workout Log</div>
+          <div class="section-sub">Your last 15 Strava activities with calorie data</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Activity</th>
+                  <th>Time</th>
+                  <th>Calories</th>
+                  <th>🍺 Earned</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="workoutTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <button class="btn-outline" onclick="refreshStrava()">↻ &nbsp; Refresh Workouts</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: FIND NEARBY -->
+  <div class="tab-panel" id="tab-nearby">
+    <div class="card" style="text-align:center;">
+      <p style="font-size:0.7rem;letter-spacing:3px;text-transform:uppercase;color:rgba(245,237,214,0.35);margin-bottom:20px;">Use your GPS to find the nearest place to cash in</p>
+      <button class="btn-outline" id="gpsBtn" onclick="findNearby()">📍 &nbsp; Find Coors Near Me</button>
+      <p class="gps-status" id="gpsStatus"></p>
+      <div class="map-links" id="mapLinks">
+        <a class="map-link" id="linkLiquor" href="#" target="_blank" rel="noopener noreferrer">🍾 Liquor Stores</a>
+        <a class="map-link" id="linkBar" href="#" target="_blank" rel="noopener noreferrer">🍺 Bars & Restaurants</a>
+        <a class="map-link" id="linkGas" href="#" target="_blank" rel="noopener noreferrer">⛽ Gas Stations</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    1 Coors Banquet (12 fl oz) = 149 calories · 5% ABV<br/>
+    Drink responsibly. This is a joke calculator, not medical advice.<br/>
+    © The Banquet Calculator · Brewed for fun, not profit
+  </div>
+</div>
+
+<script>
+  const COORS_CALS = 149;
+  // ─── STRAVA CONFIG ─────────────────────────────────────────────────────────
+  // 1. Register your app at https://www.strava.com/settings/api
+  // 2. Set Authorization Callback Domain to your Vercel domain
+  // 3. Replace YOUR_CLIENT_ID below with your numeric Client ID
+  // 4. Add STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET to Vercel Environment Variables
+  // ───────────────────────────────────────────────────────────────────────────
+  const STRAVA_CLIENT_ID  = 'YOUR_CLIENT_ID'; // <-- replace this
+  const STRAVA_REDIRECT   = window.location.origin + window.location.pathname;
+
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'strava' && getAuth()) loadStravaData();
+  }
+
+  // ── Manual Calculator ──────────────────────────────────────────────────────
+  const verdicts = [
+    { max: 0,        color: '#555',    text: '😐 Nothing yet. Get moving, cowboy.' },
+    { max: 1,        color: '#8B1A1A', text: '🥵 Barely a sip. You call that a workout?' },
+    { max: 2,        color: '#A0522D', text: '👍 A solid start. Enjoy it, you earned it.' },
+    { max: 4,        color: '#C8960C', text: '💪 Now we\'re talking. Good day\'s work.' },
+    { max: 6,        color: '#6B8E23', text: '🔥 Hell of a session. Pace yourself.' },
+    { max: 10,       color: '#228B22', text: '🏆 Legendary. You\'re basically a mountain goat.' },
+    { max: Infinity, color: '#00CED1', text: '🚀 Are you even human? That\'s an absurd amount of exercise.' },
+  ];
+  const notes = ['','A cold one by the fire. Simple pleasures.','Knock back both with pride.','You\'ve got options tonight. Sip slow, savor the Rockies.','Share a round or keep \'em all — no judgment here.','Train like that again tomorrow and you\'ll drink like a king.','At this point you might just BE Coors.'];
+
+  function selectActivity(el) {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+  }
+  function buildBeers(n) {
+    return '🍺'.repeat(Math.min(n, 10)) + (n > 10 ? ` +${n - 10}` : '');
+  }
+  function calculate() {
+    const raw = parseFloat(document.getElementById('calories').value);
+    if (isNaN(raw) || raw < 0) { shake(document.getElementById('calories')); return; }
+    const beers = Math.floor(raw / COORS_CALS);
+    const rem   = Math.round(raw % COORS_CALS);
+    document.getElementById('beerCount').textContent  = beers;
+    document.getElementById('plural').textContent     = beers === 1 ? '' : 's';
+    document.getElementById('statCal').textContent    = Math.round(raw).toLocaleString();
+    document.getElementById('statRemain').textContent = rem;
+    document.getElementById('beerVisual').textContent = beers === 0 ? '💧' : buildBeers(beers);
+    const v    = verdicts.find(v => beers < v.max) || verdicts[verdicts.length - 1];
+    const fill = document.getElementById('verdictFill');
+    fill.style.background = `linear-gradient(90deg,${v.color},${v.color}aa)`;
+    document.getElementById('verdictText').textContent = v.text;
+    document.getElementById('verdictText').style.color = v.color;
+    document.getElementById('resultNote').textContent  = notes[Math.max(0, Math.min(beers, notes.length - 1))];
+    const resultEl = document.getElementById('result');
+    resultEl.classList.remove('show');
+    void resultEl.offsetWidth;
+    resultEl.classList.add('show');
+    setTimeout(() => { fill.style.width = Math.min((beers / 10) * 100, 100) + '%'; }, 100);
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function shake(el) {
+    el.style.borderColor = '#8B1A1A';
+    el.style.boxShadow = '0 0 0 2px rgba(139,26,26,0.4)';
+    setTimeout(() => { el.style.borderColor = ''; el.style.boxShadow = ''; }, 1000);
+  }
+  document.getElementById('calories').addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+
+  // ── GPS ────────────────────────────────────────────────────────────────────
+  function findNearby() {
+    const btn = document.getElementById('gpsBtn');
+    const status = document.getElementById('gpsStatus');
+    const mapLinks = document.getElementById('mapLinks');
+    if (!navigator.geolocation) { status.textContent = 'Geolocation not supported.'; status.className = 'gps-status error'; return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinning">🧭</span> &nbsp; Getting your location...';
+    status.textContent = 'Allow location access when prompted.';
+    status.className = 'gps-status loading';
+    mapLinks.classList.remove('show');
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: { latitude: lat, longitude: lng } }) => {
+        const base = 'https://www.google.com/maps/search/';
+        const ll   = `@${lat},${lng},14z`;
+        document.getElementById('linkLiquor').href = `${base}coors+banquet+liquor+store/${ll}`;
+        document.getElementById('linkBar').href    = `${base}coors+banquet+bar+restaurant/${ll}`;
+        document.getElementById('linkGas').href    = `${base}coors+banquet+gas+station/${ll}`;
+        btn.innerHTML     = '✅ &nbsp; Location Found — Pick a Spot';
+        btn.disabled      = false;
+        status.textContent = `📡 Locked on: ${lat.toFixed(4)}°N, ${Math.abs(lng).toFixed(4)}°W`;
+        status.className   = 'gps-status';
+        mapLinks.classList.add('show');
+      },
+      (err) => {
+        btn.innerHTML = '📍 &nbsp; Find Coors Near Me';
+        btn.disabled  = false;
+        const msgs = { 1: 'Location access denied.', 2: 'Could not get location.', 3: 'Request timed out.' };
+        status.textContent = msgs[err.code] || 'Something went wrong.';
+        status.className   = 'gps-status error';
+      },
+      { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true }
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // STRAVA INTEGRATION
+  // ══════════════════════════════════════════════════════════════════════════
+  const LS_KEY = 'banquet_strava_auth';
+  const getAuth   = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch { return null; } };
+  const saveAuth  = d  => localStorage.setItem(LS_KEY, JSON.stringify(d));
+  const clearAuth = () => localStorage.removeItem(LS_KEY);
+
+  function connectStrava() {
+    const url = `https://www.strava.com/oauth/authorize`
+      + `?client_id=${STRAVA_CLIENT_ID}`
+      + `&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT)}`
+      + `&response_type=code`
+      + `&approval_prompt=auto`
+      + `&scope=read,activity:read`;
+    window.location.href = url;
+  }
+
+  function disconnectStrava() {
+    clearAuth();
+    document.getElementById('athleteBar').classList.remove('show');
+    document.getElementById('stravaData').classList.remove('show');
+    document.getElementById('stravaConnect').style.display = 'block';
+    document.getElementById('stravaError').classList.remove('show');
+  }
+
+  function setStravaUI(state) {
+    document.getElementById('stravaConnect').style.display  = state === 'connect'  ? 'block' : 'none';
+    document.getElementById('stravaLoading').classList[state === 'loading'  ? 'add' : 'remove']('show');
+    document.getElementById('stravaError').classList[state === 'error'    ? 'add' : 'remove']('show');
+    document.getElementById('stravaData').classList[state === 'data'     ? 'add' : 'remove']('show');
+  }
+
+  async function apiPost(body) {
+    const res = await fetch('/api/strava-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+    return res.json();
+  }
+
+  async function getValidToken() {
+    let auth = getAuth();
+    if (!auth) return null;
+    if (Date.now() / 1000 > auth.expires_at - 300) {
+      try {
+        const fresh = await apiPost({ grant_type: 'refresh_token', refresh_token: auth.refresh_token });
+        auth = { ...auth, ...fresh };
+        saveAuth(auth);
+      } catch { clearAuth(); return null; }
+    }
+    return auth.access_token;
+  }
+
+  async function fetchActivities(token) {
+    const res = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=60&page=1', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch activities');
+    return res.json();
+  }
+
+  // Helpers
+  const fmtDur  = s => { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60); return h > 0 ? `${h}h ${m}m` : `${m}m`; };
+  const fmtDate = d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const actEmo  = t => ({ Run:'🏃',Ride:'🚴',Swim:'🏊',Walk:'🚶',Hike:'🥾',WeightTraining:'🏋️',Workout:'💪',Yoga:'🧘',Soccer:'⚽',Tennis:'🎾',Rowing:'🚣',Crossfit:'🔥',EBikeRide:'⚡',VirtualRide:'🖥️',VirtualRun:'🖥️' }[t] || '🏅');
+
+  function groupByWeek(activities) {
+    const weeks = {};
+    activities.forEach(a => {
+      const d   = new Date(a.start_date_local);
+      const day = d.getDay();
+      d.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+      const key = d.toISOString().slice(0, 10);
+      if (!weeks[key]) weeks[key] = { calories: 0, count: 0, key };
+      weeks[key].calories += (a.calories || 0);
+      weeks[key].count++;
+    });
+    return Object.values(weeks).sort((a, b) => b.key.localeCompare(a.key));
+  }
+
+  function renderStravaData(auth, activities) {
+    // Athlete bar
+    document.getElementById('athleteBar').classList.add('show');
+    if (auth.athlete) {
+      document.getElementById('athleteName').textContent =
+        `${auth.athlete.firstname || ''} ${auth.athlete.lastname || ''}`.trim() || 'Athlete';
+      document.getElementById('athleteMeta').textContent =
+        [auth.athlete.city, auth.athlete.state].filter(Boolean).join(', ') + ' · Strava Connected';
+    }
+
+    const withCals   = activities.filter(a => a.calories > 0);
+    const recent15   = withCals.slice(0, 15);
+    const mostRecent = withCals[0];
+    const weeks      = groupByWeek(withCals).slice(0, 8);
+    const avgCals    = weeks.length ? Math.round(weeks.reduce((s,w) => s + w.calories, 0) / weeks.length) : 0;
+    const trendBeers = Math.floor(avgCals / COORS_CALS);
+    const recentBeers = mostRecent ? Math.floor(mostRecent.calories / COORS_CALS) : 0;
+
+    // Summary cards
+    document.getElementById('summaryGrid').innerHTML = `
+      <div class="summary-card highlight">
+        <div class="summary-val big">${recentBeers}</div>
+        <div class="summary-lbl">🍺 Last Workout</div>
+        <div class="summary-sub">${mostRecent ? mostRecent.calories + ' cal burned' : 'No data'}</div>
+      </div>
+      <div class="summary-card highlight">
+        <div class="summary-val big">${trendBeers}</div>
+        <div class="summary-lbl">🍺 Weekly Avg Trend</div>
+        <div class="summary-sub">${avgCals} avg cal/week</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-val">${withCals.length}</div>
+        <div class="summary-lbl">Activities w/ Cals</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-val">${weeks.length}</div>
+        <div class="summary-lbl">Weeks Analyzed</div>
+      </div>`;
+
+    // Most recent card
+    document.getElementById('recentWorkoutCard').innerHTML = mostRecent ? `
+      <div class="summary-card" style="text-align:left;display:flex;gap:16px;align-items:center;">
+        <div style="font-size:2.2rem;">${actEmo(mostRecent.type)}</div>
+        <div style="flex:1;">
+          <div style="font-family:'Rye',cursive;color:var(--gold-light);margin-bottom:4px;">${mostRecent.name}</div>
+          <div style="font-size:0.78rem;color:rgba(245,237,214,0.45);">${fmtDate(mostRecent.start_date_local)} &middot; ${fmtDur(mostRecent.moving_time)} &middot; ${mostRecent.calories} cal</div>
+        </div>
+        <div style="text-align:center;flex-shrink:0;">
+          <div style="font-family:'Rye',cursive;font-size:2rem;color:var(--gold-light);">${recentBeers}</div>
+          <div style="font-size:0.65rem;letter-spacing:1px;color:rgba(245,237,214,0.4);text-transform:uppercase;">Banquets</div>
+          <div style="font-size:0.9rem;margin-top:3px;">${'🍺'.repeat(Math.min(recentBeers,5))}${recentBeers>5?'…':''}</div>
+        </div>
+      </div>` : `<p style="color:rgba(245,237,214,0.4);font-style:italic;font-size:0.88rem;">No recent activities with calorie data found.</p>`;
+
+    // Trend bars
+    const maxCals = Math.max(...weeks.map(w => w.calories), 1);
+    document.getElementById('trendSection').innerHTML = weeks.length
+      ? weeks.map((w, i) => {
+          const wb  = Math.floor(w.calories / COORS_CALS);
+          const pct = (w.calories / maxCals * 100).toFixed(1);
+          const lbl = new Date(w.key).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          const hue = 30 + (i / Math.max(weeks.length - 1, 1)) * 15;
+          return `<div class="trend-row">
+            <div class="trend-week">${lbl}</div>
+            <div class="trend-bar-wrap"><div class="trend-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,hsl(${hue},80%,35%),hsl(${hue+10},75%,48%));"></div></div>
+            <div class="trend-beers">${wb} 🍺</div>
+          </div>`;
+        }).join('')
+      : `<p style="color:rgba(245,237,214,0.4);font-style:italic;font-size:0.88rem;">Not enough data to show a trend yet.</p>`;
+
+    // Workout table
+    document.getElementById('workoutTableBody').innerHTML = recent15.map(a => {
+      const b = Math.floor(a.calories / COORS_CALS);
+      return `<tr>
+        <td class="td-date">${fmtDate(a.start_date_local)}</td>
+        <td>${actEmo(a.type)} ${a.name}<div class="td-type">${a.type}</div></td>
+        <td>${fmtDur(a.moving_time)}</td>
+        <td>${a.calories.toLocaleString()}</td>
+        <td class="td-beers">${b}</td>
+        <td>${'🍺'.repeat(Math.min(b,5))}${b>5?'+':''}</td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="6" style="text-align:center;color:rgba(245,237,214,0.3);font-style:italic;padding:24px;">No activities with calorie data found.</td></tr>`;
+
+    setStravaUI('data');
+  }
+
+  async function loadStravaData() {
+    setStravaUI('loading');
+    try {
+      const token = await getValidToken();
+      if (!token) { setStravaUI('connect'); return; }
+      const activities = await fetchActivities(token);
+      renderStravaData(getAuth(), activities);
+    } catch (err) {
+      document.getElementById('stravaErrorMsg').textContent = 'Could not load Strava data: ' + (err.message || 'Unknown error');
+      setStravaUI('error');
+    }
+  }
+
+  async function refreshStrava() { await loadStravaData(); }
+
+  // ── OAuth callback ─────────────────────────────────────────────────────────
+  (async function init() {
+    const params = new URLSearchParams(window.location.search);
+    const code   = params.get('code');
+    const error  = params.get('error');
+
+    if (error || !code) {
+      // Not a callback — check if already authed
+      if (getAuth()) {
+        const bar = document.getElementById('athleteBar');
+        const auth = getAuth();
+        bar.classList.add('show');
+        document.getElementById('stravaConnect').style.display = 'none';
+        if (auth.athlete) {
+          document.getElementById('athleteName').textContent = `${auth.athlete.firstname||''} ${auth.athlete.lastname||''}`.trim();
+          document.getElementById('athleteMeta').textContent = 'Connected · open Strava tab to view data';
+        }
+      }
+      return;
+    }
+
+    // OAuth callback — clean URL and switch to strava tab
+    history.replaceState({}, '', window.location.pathname);
+    switchTab('strava', document.querySelectorAll('.tab-btn')[1]);
+    setStravaUI('loading');
+
+    try {
+      const data = await apiPost({ code, grant_type: 'authorization_code' });
+      saveAuth(data);
+      await loadStravaData();
+    } catch (err) {
+      document.getElementById('stravaErrorMsg').textContent = 'Authorization failed: ' + (err.message || 'Unknown error');
+      setStravaUI('error');
+    }
+  })();
+</script>
+</body>
+</html>
