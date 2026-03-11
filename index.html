@@ -514,6 +514,33 @@
   const fmtDate = d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const actEmo  = t => ({ Run:'🏃',Ride:'🚴',Swim:'🏊',Walk:'🚶',Hike:'🥾',WeightTraining:'🏋️',Workout:'💪',Yoga:'🧘',Soccer:'⚽',Tennis:'🎾',Rowing:'🚣',Crossfit:'🔥',EBikeRide:'⚡',VirtualRide:'🖥️',VirtualRun:'🖥️' }[t] || '🏅');
 
+  // Estimate calories from activity type + duration when Strava returns 0
+  // Uses MET (Metabolic Equivalent of Task) values × 70kg avg body weight
+  const MET_VALUES = {
+    Run:7.5, VirtualRun:7.5, Trail:9, Ride:8, VirtualRide:6.5, EBikeRide:4,
+    Swim:7, Walk:3.5, Hike:5.5, WeightTraining:5, Workout:5, Crossfit:8,
+    Yoga:2.5, Rowing:6, Soccer:7, Tennis:7, Basketball:6.5, Golf:3.5,
+    Skateboard:5, Snowboard:5, Ski:6, IceSkate:5.5, Surfing:4, Kayaking:5,
+    Elliptical:5, StairStepper:6, RockClimbing:8
+  };
+  function estimateCalories(activity) {
+    if (activity.calories > 0) return activity.calories;
+    // kilojoules → calories (cycling power meters report kJ ≈ cal)
+    if (activity.kilojoules > 0) return Math.round(activity.kilojoules);
+    const met = MET_VALUES[activity.type] || 4.5;
+    const hours = (activity.moving_time || activity.elapsed_time || 0) / 3600;
+    // Calories = MET × weight(kg) × hours
+    return Math.round(met * 70 * hours);
+  }
+
+  function enrichActivities(activities) {
+    return activities.map(a => ({
+      ...a,
+      calories: estimateCalories(a),
+      _estimated: !(a.calories > 0),
+    }));
+  }
+
   function groupByWeek(activities) {
     const weeks = {};
     activities.forEach(a => {
@@ -538,7 +565,8 @@
         [auth.athlete.city, auth.athlete.state].filter(Boolean).join(', ') + ' · Strava Connected';
     }
 
-    const withCals   = activities.filter(a => a.calories > 0);
+    const enriched   = enrichActivities(activities);
+    const withCals   = enriched.filter(a => a.calories > 0);
     const recent15   = withCals.slice(0, 15);
     const mostRecent = withCals[0];
     const weeks      = groupByWeek(withCals).slice(0, 8);
@@ -551,7 +579,7 @@
       <div class="summary-card highlight">
         <div class="summary-val big">${recentBeers}</div>
         <div class="summary-lbl">🍺 Last Workout</div>
-        <div class="summary-sub">${mostRecent ? mostRecent.calories + ' cal burned' : 'No data'}</div>
+        <div class="summary-sub">${mostRecent ? mostRecent.calories + ' cal' + (mostRecent._estimated ? ' (est.)' : '') : 'No data'}</div>
       </div>
       <div class="summary-card highlight">
         <div class="summary-val big">${trendBeers}</div>
@@ -573,7 +601,7 @@
         <div style="font-size:2.2rem;">${actEmo(mostRecent.type)}</div>
         <div style="flex:1;">
           <div style="font-family:'Rye',cursive;color:var(--gold-light);margin-bottom:4px;">${mostRecent.name}</div>
-          <div style="font-size:0.78rem;color:rgba(245,237,214,0.45);">${fmtDate(mostRecent.start_date_local)} &middot; ${fmtDur(mostRecent.moving_time)} &middot; ${mostRecent.calories} cal</div>
+          <div style="font-size:0.78rem;color:rgba(245,237,214,0.45);">${fmtDate(mostRecent.start_date_local)} &middot; ${fmtDur(mostRecent.moving_time)} &middot; ${mostRecent.calories} cal${mostRecent._estimated ? ' (est.)' : ''}</div>
         </div>
         <div style="text-align:center;flex-shrink:0;">
           <div style="font-family:'Rye',cursive;font-size:2rem;color:var(--gold-light);">${recentBeers}</div>
@@ -605,7 +633,7 @@
         <td class="td-date">${fmtDate(a.start_date_local)}</td>
         <td>${actEmo(a.type)} ${a.name}<div class="td-type">${a.type}</div></td>
         <td>${fmtDur(a.moving_time)}</td>
-        <td>${a.calories.toLocaleString()}</td>
+        <td>${a.calories.toLocaleString()}${a._estimated ? '*' : ''}</td>
         <td class="td-beers">${b}</td>
         <td>${'🍺'.repeat(Math.min(b,5))}${b>5?'+':''}</td>
       </tr>`;
