@@ -664,6 +664,14 @@
     const error  = params.get('error');
 
     if (error || !code) {
+      // Strava returned an error (e.g. user denied access, or app in sandbox mode)
+      if (error === 'access_denied') {
+        switchTab('strava', document.querySelectorAll('.tab-btn')[1]);
+        document.getElementById('stravaErrorMsg').textContent =
+          'Strava access denied. This app is still awaiting Strava approval — only the app owner can connect right now. Check back soon!';
+        setStravaUI('error');
+        return;
+      }
       // Not a callback — check if already authed
       if (getAuth()) {
         const bar = document.getElementById('athleteBar');
@@ -688,7 +696,10 @@
       saveAuth(data);
       await loadStravaData();
     } catch (err) {
-      document.getElementById('stravaErrorMsg').textContent = 'Authorization failed: ' + (err.message || 'Unknown error');
+      const msg = (err.message || '').toLowerCase().includes('denied') || (err.message || '').toLowerCase().includes('sandbox')
+        ? 'This app is awaiting Strava approval — only the app owner can connect right now. Check back soon!'
+        : 'Authorization failed: ' + (err.message || 'Unknown error');
+      document.getElementById('stravaErrorMsg').textContent = msg;
       setStravaUI('error');
     }
   })();
